@@ -14,6 +14,6 @@ export async function GET() {
     patients.map((p) => ({
       ...p,
       dob: p.dob.toISOString(),
-    }))
-  );
+    }))
+  );
 }

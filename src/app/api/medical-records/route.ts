@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { EncryptionController } from "@/services/EncryptionController";
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,13 +97,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create medical record
+    const encryptedData = EncryptionController.encryptMedicalRecord({
+      penyakit,
+      obat,
+      dokter,
+      ruangan,
+    });
     const medicalRecord = await prisma.medicalRecord.create({
       data: {
         patientId: patient.id,
-        penyakit,
-        obat,
-        dokter,
-        ruangan,
+        ...encryptedData,
         tanggal: diagnosisDate,
       },
       include: {
@@ -112,6 +116,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ...medicalRecord,
+      ...EncryptionController.decryptMedicalRecord(medicalRecord),
       patientName: medicalRecord.patient.fullName,
       patientDob: medicalRecord.patient.dob.toISOString(),
     });
@@ -135,18 +140,32 @@ export async function GET() {
       },
     });
 
-    const formattedRecords = records.map((record) => ({
-      ...record,
-      patientName: record.patient.fullName,
-      patientDob: record.patient.dob.toISOString(),
-    }));
+    const formattedRecords = records.map((record) => {
+      let decrypted = { penyakit: "", obat: "", dokter: "", ruangan: "" };
+      try {
+        decrypted = EncryptionController.decryptMedicalRecord(record);
+      } catch {
+        decrypted = {
+          penyakit: "[DECRYPT ERROR]",
+          obat: "[DECRYPT ERROR]",
+          dokter: "[DECRYPT ERROR]",
+          ruangan: "[DECRYPT ERROR]",
+        };
+      }
+      return {
+        ...record,
+        ...decrypted,
+        patientName: record.patient.fullName,
+        patientDob: record.patient.dob.toISOString(),
+      };
+    });
 
     return NextResponse.json(formattedRecords);
   } catch (error) {
     console.error("GET /medical-records: Error", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
-  }
+      { status: 500 }
+    );
+  }
 }

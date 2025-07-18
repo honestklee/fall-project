@@ -19,10 +19,18 @@ export default async function EditAccount({
     const fullName = formData.get("fullName") as string;
     const address = formData.get("address") as string;
     const dob = new Date(formData.get("dob") as string);
+    const noHp = formData.get("noHp") as string;
 
+    // Update data pasien
     await prisma.patient.update({
       where: { id: user!.patient!.id },
       data: { fullName, address, dob },
+    });
+
+    // Update nomor HP di User
+    await prisma.user.update({
+      where: { id: user!.id },
+      data: { noHp },
     });
 
     redirect("/dashboard/admin/accounts");
@@ -55,6 +63,13 @@ export default async function EditAccount({
         defaultValue={user.patient.dob.toISOString().split("T")[0]}
         className="w-full p-2 border mb-3 rounded"
         required
+      />
+      <input
+        type="text"
+        name="noHp"
+        defaultValue={user.noHp ?? ""}
+        placeholder="Nomor HP"
+        className="w-full p-2 border mb-3 rounded"
       />
 
       <button

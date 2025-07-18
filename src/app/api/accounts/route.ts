@@ -15,6 +15,7 @@ export async function GET() {
     fullName: u.patient?.fullName ?? "-",
     address: u.patient?.address ?? "-",
     dob: u.patient?.dob ?? "-",
+    noHp: u.noHp ?? "",
   }));
 
   return NextResponse.json(result);
@@ -23,7 +24,7 @@ export async function GET() {
 // POST: Tambah akun pasien baru
 export async function POST(request: Request) {
   const body = await request.json();
-  const { fullName, email, address, dob, password } = body;
+  const { fullName, email, address, dob, password, noHp } = body;
 
   if (!fullName || !email || !dob || !password) {
     return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         role: "PATIENT",
+        noHp,
         patient: {
           create: {
             fullName,
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
         message: "Akun pasien berhasil ditambahkan!",
         data: {
           email,
-          password: "[TERENKRIPSI]",    
+          password: "[TERENKRIPSI]",
           fullName,
           address,
           dob,

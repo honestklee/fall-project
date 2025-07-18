@@ -36,7 +36,9 @@ export default async function EditRecord({
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 p-6">
       <div className="max-w-xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-2xl font-bold text-white">Edit Data Rekam Medis</h1>
+          <h1 className="text-2xl font-bold text-white">
+            Edit Data Rekam Medis
+          </h1>
         </div>
 
         <form
@@ -44,7 +46,8 @@ export default async function EditRecord({
           className="bg-black/40 backdrop-blur-lg rounded-2xl shadow-2xl border border-purple-500/20 p-6"
         >
           <p className="mb-4 text-purple-300">
-            Pasien: <span className="text-white">{record.patient.fullName}</span>
+            Pasien:{" "}
+            <span className="text-white">{record.patient.fullName}</span>
           </p>
 
           <input

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { FiPlus, FiX, FiEdit, FiTrash, FiChevronDown } from "react-icons/fi";
+import fetchWithAuth from "@/lib/fetchWithAuth";
+import { useSession } from "next-auth/react";
+import ProfileMenu from "@/components/ProfileMenu";
 
 interface Patient {
   id: string;
@@ -46,6 +49,9 @@ export default function AdminDashboard() {
     tanggal: "",
   });
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteRecord, setDeleteRecord] = useState<MedicalRecord | null>(null);
+
   // Helper function to format date
   const formatDate = (dateString: string | null) => {
     console.log("formatDate input:", dateString, typeof dateString); // Debug log
@@ -72,8 +78,8 @@ export default function AdminDashboard() {
   const load = async () => {
     try {
       const [r, p] = await Promise.all([
-        fetch("/api/medical-records").then((res) => res.json()),
-        fetch("/api/patients").then((res) => res.json()),
+        fetchWithAuth("/api/medical-records").then((res) => res.json()),
+        fetchWithAuth("/api/patients").then((res) => res.json()),
       ]);
       console.log("Loaded patients:", p); // Debug log untuk melihat struktur data
       setRecords(r);
@@ -139,7 +145,7 @@ export default function AdminDashboard() {
     };
 
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submitData),
@@ -194,22 +200,28 @@ export default function AdminDashboard() {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmDelete = confirm("Yakin ingin menghapus data ini?");
-    if (!confirmDelete) return;
-
     try {
-      const res = await fetch(`/api/medical-records/${id}`, {
+      const res = await fetchWithAuth(`/api/medical-records/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
         alert("✅ Data berhasil dihapus");
         load();
       } else {
-        const data = await res.json();
-        alert("❌ " + (data.error || "Gagal menghapus data"));
+        let data = {};
+        try {
+          const text = await res.text();
+          data = text ? JSON.parse(text) : {};
+        } catch (e) {
+          data = {};
+        }
+        alert("❌ " + ((data as any).error || "Gagal menghapus data"));
       }
-    } catch (error) {
-      console.error("Error deleting record:", error);
+    } catch (error: any) {
+      if (error?.message === "Session expired") {
+        setIsOpen(false);
+        return;
+      }
       alert("❌ Terjadi kesalahan saat menghapus data");
     }
   };
@@ -255,54 +267,93 @@ export default function AdminDashboard() {
     r.patientName.toLowerCase().includes(search.toLowerCase())
   );
 
+  const { data: session } = useSession();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
           <p className="text-sm text-purple-300/70 mt-1">
             Welcome back, admin@hospital.com
           </p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setEditMode(false);
-            setIsOpen(true);
-          }}
-          className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white p-3 rounded-full transition-colors shadow-lg shadow-purple-500/20 hover:scale-105"
-        >
-          <FiPlus />
-        </button>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Cari nama pasien..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border border-purple-500/20 bg-black/40 backdrop-blur-lg px-4 py-2.5 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-300/50"
+          />
+          <button
+            onClick={() => {
+              resetForm();
+              setEditMode(false);
+              setIsOpen(true);
+            }}
+            className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white p-3 rounded-full transition-colors shadow-lg shadow-purple-500/20 hover:scale-105 w-12 h-12 flex items-center justify-center"
+            title="Tambah Rekam Medis"
+          >
+            <FiPlus />
+          </button>
+          {/* ProfileMenu di sebelah kanan tombol + */}
+          <div className="w-12 h-12 flex items-center justify-center">
+            <ProfileMenu
+              user={{
+                name: session?.user?.name ?? undefined,
+                email: session?.user?.email ?? undefined,
+                noHp: session?.user?.noHp ?? undefined,
+                profilePhotoUrl: session?.user?.profilePhotoUrl ?? undefined,
+                role: session?.user?.role ?? undefined,
+                fullName: (session?.user as any)?.fullName ?? undefined,
+                position: (session?.user as any)?.position ?? undefined,
+              }}
+            />
+          </div>
+        </div>
       </div>
 
-      <input
-        type="text"
-        placeholder="Cari nama pasien..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="border border-purple-500/20 bg-black/40 backdrop-blur-lg px-4 py-2.5 mb-6 rounded-lg w-full md:w-1/3 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-300/50"
-      />
-
       <div className="bg-black/40 backdrop-blur-lg rounded-lg shadow-lg border border-purple-500/20 p-6">
-        <h2 className="font-semibold text-lg mb-4 text-white">Patient Management</h2>
+        <h2 className="font-semibold text-lg mb-4 text-white">
+          Patient Management
+        </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border border-purple-500/20 rounded-lg">
             <thead className="bg-black/40">
               <tr>
-                <th className="p-3 text-left text-purple-300 font-medium">Nama Pasien</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Tanggal Lahir</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Penyakit</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Obat</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Dokter</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Ruangan</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Waktu Diagnosis</th>
-                <th className="p-3 text-left text-purple-300 font-medium">Aksi</th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Nama Pasien
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Tanggal Lahir
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Penyakit
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Obat
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Dokter
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Ruangan
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Waktu Diagnosis
+                </th>
+                <th className="p-3 text-left text-purple-300 font-medium">
+                  Aksi
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.id} className="border-t border-purple-500/10 hover:bg-purple-500/5 transition-colors">
+                <tr
+                  key={r.id}
+                  className="border-t border-purple-500/10 hover:bg-purple-500/5 transition-colors"
+                >
                   <td className="p-3 text-white">{r.patientName}</td>
                   <td className="p-3 text-white">{formatDate(r.patientDob)}</td>
                   <td className="p-3 text-white">{r.penyakit}</td>
@@ -332,7 +383,10 @@ export default function AdminDashboard() {
                         <FiEdit />
                       </button>
                       <button
-                        onClick={() => handleDelete(r.id)}
+                        onClick={() => {
+                          setDeleteRecord(r);
+                          setShowDeleteConfirm(true);
+                        }}
                         className="text-red-400 hover:text-red-300 transition-colors"
                         title="Hapus"
                       >
@@ -344,7 +398,10 @@ export default function AdminDashboard() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center text-purple-300/70 p-6">
+                  <td
+                    colSpan={8}
+                    className="text-center text-purple-300/70 p-6"
+                  >
                     {search ? "Data tidak ditemukan" : "Belum ada data"}
                   </td>
                 </tr>
@@ -357,7 +414,10 @@ export default function AdminDashboard() {
       {/* MODAL */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={resetForm} />
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={resetForm}
+          />
           <div className="bg-black/90 max-w-md w-full p-6 rounded-lg shadow-lg relative z-10 mx-4 max-h-[90vh] overflow-y-auto border border-purple-500/20">
             <button
               onClick={resetForm}
@@ -594,6 +654,46 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50">
+          <div className="bg-black/90 rounded-lg shadow-lg w-full max-w-md p-6 relative border border-purple-500/20">
+            <h2 className="text-xl font-semibold mb-4 text-red-400">
+              Konfirmasi Hapus
+            </h2>
+            <p className="mb-6 text-purple-300/70">
+              Apakah Anda yakin ingin menghapus data medis pasien{" "}
+              <strong className="text-white">
+                {deleteRecord?.patientName}
+              </strong>
+              ? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteRecord(null);
+                }}
+                className="px-4 py-2.5 rounded-lg border border-purple-500/20 bg-black/40 hover:bg-black/60 text-white transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={async () => {
+                  if (deleteRecord) {
+                    await handleDelete(deleteRecord.id);
+                  }
+                  setShowDeleteConfirm(false);
+                  setDeleteRecord(null);
+                }}
+                className="bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white px-4 py-2.5 rounded-lg shadow-lg shadow-red-500/20 hover:scale-[1.02] transition-all duration-200"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

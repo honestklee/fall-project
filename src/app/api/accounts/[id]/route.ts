@@ -9,7 +9,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { fullName, email, address, dob, password } = body;
+    const { fullName, email, address, dob, password, noHp } = body;
     const userId = params.id;
 
     if (!fullName || !email || !dob) {
@@ -35,6 +35,7 @@ export async function PUT(
     // Prepare update data
     const updateData: any = {
       email,
+      noHp,
       patient: {
         update: {
           fullName,
@@ -111,7 +112,7 @@ export async function DELETE(
     console.error("Gagal hapus akun pasien:", error);
     return NextResponse.json(
       { error: "Gagal menghapus akun pasien" },
-      { status: 500 }
-    );
-  }
+      { status: 500 }
+    );
+  }
 }

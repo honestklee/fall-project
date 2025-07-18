@@ -4,14 +4,17 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FaHospital, FaUserMd, FaHeartbeat } from "react-icons/fa";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
     const res = await signIn("credentials", {
       redirect: false,
       email,
@@ -21,13 +24,15 @@ export default function LoginPage() {
     if (res?.ok) {
       router.push("/dashboard");
     } else {
+      setLoading(false);
       alert("Login gagal!");
     }
   }
 
+  if (loading) return <LoadingSpinner />;
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-purple-900 relative overflow-hidden">
-      {/* Background Medical Icons */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-10 left-10 text-purple-500/10 text-6xl">
           <FaHospital />
@@ -42,12 +47,15 @@ export default function LoginPage() {
           <FaHospital />
         </div>
       </div>
-
       <div className="w-full max-w-md p-8 relative z-10">
         <div className="text-center mb-8">
           <FaHospital className="text-purple-400 text-5xl mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-purple-400">Hospital Portal</h1>
-          <p className="text-purple-300/70 mt-2">Sign in to access your account</p>
+          <h1 className="text-3xl font-bold text-purple-400">
+            Hospital Portal
+          </h1>
+          <p className="text-purple-300/70 mt-2">
+            Sign in to access your account
+          </p>
         </div>
 
         <form
@@ -85,6 +93,7 @@ export default function LoginPage() {
           </div>
         </form>
       </div>
-    </div>
-  );
+         
+    </div>
+  );
 }

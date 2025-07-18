@@ -13,7 +13,7 @@ export default async function Dashboard() {
   // Get user role from database
   const user = await prisma.user.findUnique({
     where: { email: session.user?.email! },
-    select: { role: true }
+    select: { role: true },
   });
 
   if (!user) {
@@ -21,9 +21,11 @@ export default async function Dashboard() {
   }
 
   // Redirect based on role
-  if (user.role === "ADMIN") {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
     redirect("/dashboard/admin");
-  } else {
+  } else if (user.role === "PATIENT") {
     redirect("/dashboard/patient");
+  } else {
+    redirect("/login");
   }
 }

@@ -17,9 +17,15 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
+  fullName  String?
+  noHp      String?
   role      Role
+  profilePhotoUrl String?
+  position  String?
+  lastLogin DateTime?
   patient   Patient? @relation(fields: [patientId], references: [id])
   patientId String?  @unique
+  recordedAccidents Accident[] @relation("UserRecordedAccidents")
 }
 
 model Patient {
@@ -29,6 +35,7 @@ model Patient {
   dob       DateTime
   medicalRecords MedicalRecord[]
   user      User?
+  accidents Accident[] @relation("PatientAccidents")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -46,7 +53,27 @@ model MedicalRecord {
   updatedAt DateTime @updatedAt
 }
 
+model Accident {
+  id                String   @id @default(uuid())
+  patientId         String
+  patient           Patient  @relation("PatientAccidents", fields: [patientId], references: [id])
+  tanggalKejadian   DateTime
+  lokasi            String
+  kronologi         String
+  sudahDitangani    Boolean
+  penanganan        String?
+  kondisiPatient    String?
+  hasilPengecekan   String?
+  petugasPencatatId String
+  petugasPencatat   User     @relation("UserRecordedAccidents", fields: [petugasPencatatId], references: [id])
+  catatanTambahan   String?
+  ditanganiOleh     String?
+  createdAt         DateTime @default(now())
+}
+
 enum Role {
+  SUPER_ADMIN
   ADMIN
   PATIENT
 }
+

@@ -6,10 +6,14 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const { email, password } = await req.json();
+  const { email, password, fullName, noHp, position } = await req.json();
 
   try {
-    const data: any = { email };
+    const data: any = {};
+    if (email) data.email = email;
+    if (fullName) data.fullName = fullName;
+    if (noHp) data.noHp = noHp;
+    if (position) data.position = position;
     if (password && password.length > 0) {
       data.password = await bcrypt.hash(password, 10);
     }
@@ -35,6 +39,6 @@ export async function DELETE(
     });
     return NextResponse.json({ message: "deleted" });
   } catch (error) {
-    return NextResponse.json({ error: "Gagal hapus" }, { status: 500 });
-  }
+    return NextResponse.json({ error: "Gagal hapus" }, { status: 500 });
+  }
 }

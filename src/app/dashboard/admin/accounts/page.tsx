@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FiEdit, FiTrash, FiPlus, FiX } from "react-icons/fi";
+import fetchWithAuth from "@/lib/fetchWithAuth";
 
 export default function PatientAccounts() {
   const [patients, setPatients] = useState<any[]>([]);
@@ -17,6 +18,7 @@ export default function PatientAccounts() {
     address: "",
     dob: "",
     password: "",
+    noHp: "",
   });
 
   const [editAccount, setEditAccount] = useState({
@@ -26,11 +28,12 @@ export default function PatientAccounts() {
     address: "",
     dob: "",
     password: "",
+    noHp: "",
   });
 
   useEffect(() => {
     const getData = async () => {
-      const res = await fetch("/api/accounts");
+      const res = await fetchWithAuth("/api/accounts");
       const json = await res.json();
       setPatients(json);
     };
@@ -46,14 +49,14 @@ export default function PatientAccounts() {
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch("/api/accounts", {
+    const res = await fetchWithAuth("/api/accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newAccount),
     });
 
     if (res.ok) {
-      const refreshed = await fetch("/api/accounts");
+      const refreshed = await fetchWithAuth("/api/accounts");
       const json = await refreshed.json();
       setPatients(json);
       setShowAddAccount(false);
@@ -63,6 +66,7 @@ export default function PatientAccounts() {
         address: "",
         dob: "",
         password: "",
+        noHp: "",
       });
       alert("Berhasil ditambahkan");
     } else {
@@ -73,7 +77,7 @@ export default function PatientAccounts() {
   const handleEditAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch(`/api/accounts/${editAccount.id}`, {
+    const res = await fetchWithAuth(`/api/accounts/${editAccount.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -81,12 +85,13 @@ export default function PatientAccounts() {
         email: editAccount.email,
         address: editAccount.address,
         dob: editAccount.dob,
+        noHp: editAccount.noHp,
         ...(editAccount.password && { password: editAccount.password }),
       }),
     });
 
     if (res.ok) {
-      const refreshed = await fetch("/api/accounts");
+      const refreshed = await fetchWithAuth("/api/accounts");
       const json = await refreshed.json();
       setPatients(json);
       setShowEditAccount(false);
@@ -97,6 +102,7 @@ export default function PatientAccounts() {
         address: "",
         dob: "",
         password: "",
+        noHp: "",
       });
       alert("Berhasil diperbarui");
     } else {
@@ -107,12 +113,12 @@ export default function PatientAccounts() {
   const handleDeleteAccount = async () => {
     if (!selectedPatient?.id) return;
 
-    const res = await fetch(`/api/accounts/${selectedPatient.id}`, {
+    const res = await fetchWithAuth(`/api/accounts/${selectedPatient.id}`, {
       method: "DELETE",
     });
 
     if (res.ok) {
-      const refreshed = await fetch("/api/accounts");
+      const refreshed = await fetchWithAuth("/api/accounts");
       const json = await refreshed.json();
       setPatients(json);
       setShowDeleteConfirm(false);
@@ -131,6 +137,7 @@ export default function PatientAccounts() {
       address: patient.address,
       dob: patient.dob ? new Date(patient.dob).toISOString().split("T")[0] : "",
       password: "",
+      noHp: patient.noHp || "",
     });
     setShowEditAccount(true);
   };
@@ -167,6 +174,7 @@ export default function PatientAccounts() {
             <tr>
               <th className="p-3 text-left text-purple-300">Nama</th>
               <th className="p-3 text-left text-purple-300">Email</th>
+              <th className="p-3 text-left text-purple-300">Nomor HP</th>
               <th className="p-3 text-left text-purple-300">Alamat</th>
               <th className="p-3 text-left text-purple-300">Tanggal Lahir</th>
               <th className="p-3 text-left text-purple-300">Aksi</th>
@@ -174,9 +182,13 @@ export default function PatientAccounts() {
           </thead>
           <tbody>
             {filtered.map((p: any) => (
-              <tr key={p.id} className="border-t border-purple-500/10 hover:bg-purple-500/5">
+              <tr
+                key={p.id}
+                className="border-t border-purple-500/10 hover:bg-purple-500/5"
+              >
                 <td className="p-3 text-white">{p.fullName}</td>
                 <td className="p-3 text-white">{p.email}</td>
+                <td className="p-3 text-white">{p.noHp}</td>
                 <td className="p-3 text-white">{p.address}</td>
                 <td className="p-3 text-white">
                   {new Date(p.dob).toLocaleDateString("id-ID")}
@@ -201,7 +213,7 @@ export default function PatientAccounts() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-purple-300/70">
+                <td colSpan={6} className="p-4 text-center text-purple-300/70">
                   Tidak ditemukan
                 </td>
               </tr>
@@ -220,7 +232,9 @@ export default function PatientAccounts() {
             >
               <FiX size={20} />
             </button>
-            <h2 className="text-xl font-semibold mb-4 text-white">Tambah Akun Pasien</h2>
+            <h2 className="text-xl font-semibold mb-4 text-white">
+              Tambah Akun Pasien
+            </h2>
             <form onSubmit={handleAddAccount} className="space-y-4">
               <input
                 type="text"
@@ -266,6 +280,19 @@ export default function PatientAccounts() {
                 }
               />
               <input
+                type="text"
+                placeholder="Nomor HP"
+                name="noHp"
+                required
+                pattern="^[0-9]{10,15}$"
+                title="Nomor HP harus 10-15 digit angka"
+                className="w-full border border-purple-500/20 bg-black/40 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-300/50"
+                value={newAccount.noHp}
+                onChange={(e) =>
+                  setNewAccount({ ...newAccount, noHp: e.target.value })
+                }
+              />
+              <input
                 type="date"
                 name="dob"
                 required
@@ -305,7 +332,9 @@ export default function PatientAccounts() {
             >
               <FiX size={20} />
             </button>
-            <h2 className="text-xl font-semibold mb-4 text-white">Edit Akun Pasien</h2>
+            <h2 className="text-xl font-semibold mb-4 text-white">
+              Edit Akun Pasien
+            </h2>
             <form onSubmit={handleEditAccount} className="space-y-4">
               <input
                 type="text"
@@ -347,6 +376,19 @@ export default function PatientAccounts() {
                 value={editAccount.address}
                 onChange={(e) =>
                   setEditAccount({ ...editAccount, address: e.target.value })
+                }
+              />
+              <input
+                type="text"
+                placeholder="Nomor HP"
+                name="noHp"
+                required
+                pattern="^[0-9]{10,15}$"
+                title="Nomor HP harus 10-15 digit angka"
+                className="w-full border border-purple-500/20 bg-black/40 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-purple-300/50"
+                value={editAccount.noHp}
+                onChange={(e) =>
+                  setEditAccount({ ...editAccount, noHp: e.target.value })
                 }
               />
               <input
@@ -394,8 +436,10 @@ export default function PatientAccounts() {
             </h2>
             <p className="mb-6 text-purple-300/70">
               Apakah Anda yakin ingin menghapus akun pasien{" "}
-              <strong className="text-white">{selectedPatient?.fullName}</strong>? Tindakan ini tidak
-              dapat dibatalkan.
+              <strong className="text-white">
+                {selectedPatient?.fullName}
+              </strong>
+              ? Tindakan ini tidak dapat dibatalkan.
             </p>
             <div className="flex justify-end space-x-2">
               <button

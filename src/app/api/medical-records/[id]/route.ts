@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { EncryptionController } from "@/services/EncryptionController";
 
 // DELETE rekam medis by ID
 export async function DELETE(
@@ -33,19 +34,25 @@ export async function PATCH(
   const { penyakit, obat, dokter, ruangan, tanggal } = body;
 
   try {
+    const encryptedData = EncryptionController.encryptMedicalRecord({
+      penyakit,
+      obat,
+      dokter,
+      ruangan,
+    });
     const updated = await prisma.medicalRecord.update({
       where: { id },
       data: {
-        penyakit,
-        obat,
-        dokter,
-        ruangan,
+        ...encryptedData,
         tanggal: new Date(tanggal),
       },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json({
+      ...updated,
+      ...EncryptionController.decryptMedicalRecord(updated),
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Gagal update data" }, { status: 500 });
-  }
+    return NextResponse.json({ error: "Gagal update data" }, { status: 500 });
+  }
 }
